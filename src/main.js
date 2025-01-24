@@ -16,6 +16,13 @@ const csvFilePath = '/Motor_Vehicle_Collisions_Crashes.csv'; // Path should be r
 // Store parsed data globally
 let crashData = [];
 
+// Tooltip for hover information
+const tooltip = L.tooltip({
+    permanent: false,
+    direction: 'top',
+    offset: [0, -10],
+}); // Initialize as empty and off-screen
+
 // Parse CSV file using PapaParse
 Papa.parse(csvFilePath, {
     download: true,
@@ -41,6 +48,48 @@ Papa.parse(csvFilePath, {
             blur: 15,             // Blur effect to make heatmap more smooth
             maxZoom: 15,          // Maximum zoom level for heatmap intensity
         }).addTo(map);
+        // Add the tooltip to the map only when it's needed
+        map.on('mousemove', (e) => {
+            const { lat, lng } = e.latlng;
+        
+            // Find the closest data point within a threshold
+            const threshold = 0.002; // Adjust for sensitivity
+            const closestPoint = crashData.find((row) => {
+                const latitude = parseFloat(row.LATITUDE);
+                const longitude = parseFloat(row.LONGITUDE);
+        
+                // Validate that latitude and longitude are numbers
+                if (isNaN(latitude) || isNaN(longitude)) {
+                    return false;
+                }
+        
+                const latDiff = Math.abs(latitude - lat);
+                const lngDiff = Math.abs(longitude - lng);
+                return latDiff < threshold && lngDiff < threshold;
+            });
+        
+            if (closestPoint) {
+                const lat = parseFloat(closestPoint.LATITUDE);
+                const lon = parseFloat(closestPoint.LONGITUDE);
+        
+                // Ensure the coordinates are valid before displaying the tooltip
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const tooltipContent = `
+                        <strong>Location:</strong> ${closestPoint.LOCATION || 'N/A'}<br>
+                        <strong>Street Name:</strong> ${closestPoint['ON STREET NAME'] || 'N/A'}<br>
+                        <strong>Borough:</strong> ${closestPoint.BOROUGH || 'N/A'}<br>
+                        <strong>Crash Date:</strong> ${closestPoint['CRASH DATE'] || 'N/A'}<br>
+                        <strong>Persons Injured:</strong> ${closestPoint['NUMBER OF PERSONS INJURED'] || 0}<br>
+                    `;
+        
+                    tooltip.setLatLng([lat, lon]).setContent(tooltipContent).openOn(map);
+                } else {
+                    tooltip.remove(); // Hide the tooltip if coordinates are invalid
+                }
+            } else {
+                tooltip.remove(); // Hide the tooltip if no valid point is found
+            }
+        });
     },
     error: function(error) {
         console.error('Error parsing CSV:', error);
