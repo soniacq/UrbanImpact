@@ -46,3 +46,29 @@ Papa.parse(csvFilePath, {
         console.error('Error parsing CSV:', error);
     }
 });
+
+
+// Search functionality
+const searchBox = document.getElementById('search-box');
+searchBox.addEventListener('input', (event) => {
+    const query = event.target.value.toLowerCase();
+
+    // Filter the data based on the query (search by borough, zip, or street)
+    const result = crashData.filter(row => {
+        return (
+            row.BOROUGH && row.BOROUGH.toLowerCase().includes(query) ||
+            row['ZIP CODE'] && row['ZIP CODE'].toLowerCase().includes(query) ||
+            row['ON STREET NAME'] && row['ON STREET NAME'].toLowerCase().includes(query)
+        );
+    });
+
+    // If results are found, zoom to the first result
+    if (result.length > 0) {
+        const firstResult = result[0];
+        const lat = parseFloat(firstResult.LATITUDE);
+        const lon = parseFloat(firstResult.LONGITUDE);
+
+        // Zoom in to the first matching location
+        map.setView([lat, lon], 15);
+    }
+});
